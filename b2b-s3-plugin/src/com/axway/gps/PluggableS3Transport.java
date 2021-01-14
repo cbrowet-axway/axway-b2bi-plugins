@@ -10,11 +10,13 @@
  * 20180506 bvandenberg		1.0.1	Updates (disconnect)
  * 20190919 bvandenberg	  1.0.2	- Fix for nested folder
  * 20200501 evanhamersveld 	1.0.3   Removed unused imports/variables, code review
+ * 20210114 cbrowet     	1.0.4   Use EC2 instance credentials if not provided explicitely
  *==============================================================================*/
 package com.axway.gps;
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.auth.InstanceProfileCredentialsProvider;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
@@ -74,7 +76,7 @@ public class PluggableS3Transport implements PluggableClient {
 
 	// Set program name and version
 	String _PGMNAME = com.axway.gps.PluggableS3Transport.class.getName();
-	String _PGMVERSION = "1.0.3";
+	String _PGMVERSION = "1.0.4";
 
 	/**
 	 * Constants defining valid configuration tags These tags must NOT contain space
@@ -201,10 +203,16 @@ public class PluggableS3Transport implements PluggableClient {
 		}
 
 		try {
-			credentials = new BasicAWSCredentials(_accessKey, _secretKey);
-			amazonS3 = AmazonS3ClientBuilder.standard().withRegion(_region)
-					.withCredentials(new AWSStaticCredentialsProvider(credentials)).build();
-
+			if (_accessKey.isEmpty()) 			{
+				amazonS3 = AmazonS3ClientBuilder.standard().withRegion(_region)
+						.withCredentials(new InstanceProfileCredentialsProvider(false)).build();
+			}
+			else {
+				credentials = new BasicAWSCredentials(_accessKey, _secretKey);
+				amazonS3 = AmazonS3ClientBuilder.standard().withRegion(_region)
+						.withCredentials(new AWSStaticCredentialsProvider(credentials)).build();
+	
+			}
 			logger.debug("New Amazon S3 Client Connected");
 
 		} catch (Exception e) {
